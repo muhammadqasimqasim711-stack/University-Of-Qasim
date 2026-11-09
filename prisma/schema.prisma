@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model MasterConfiguration {
+  id                   Int      @id @default(1)
+  libraryName          String   @default("University of Qasim")
+  contactEmail         String   @default("library@uoq.edu.pk")
+  borrowingPeriodDays  Int      @default(14)
+  maxBooksPerStudent   Int      @default(3)
+  maxBooksPerTeacher   Int      @default(5)
+  monthlyBorrowLimit   Int      @default(5)
+  defaultCopiesPerBook Int      @default(10)
+  barcodeStart         String   @default("BC-001")
+  barcodeEnd           String   @default("BC-100")
+  adminPasswordHash    String   @default("")
+  updatedAt            DateTime @updatedAt
+}
+
+model Department {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  programs Program[]
+}
+
+model Program {
+  id           Int        @id @default(autoincrement())
+  name         String
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([name, departmentId])
+}
+
+model Semester {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
+
+model BatchSession {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
+
+model Designation {
+  id    Int    @id @default(autoincrement())
+  title String @unique
+}
+
+model Student {
+  id             Int            @id @default(autoincrement())
+  rollNumber     String         @unique
+  fullName       String
+  fatherName     String
+  gender         String
+  dateOfBirth    DateTime
+  department     String
+  program        String
+  semester       Int
+  batchSession   String
+  enrollmentDate DateTime
+  mobileNumber   String
+  email          String         @unique
+  passwordHash   String         @default("")
+  status         String         @default("ACTIVE")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  loans          Loan[]
+  reservations   Reservation[]
+  bookRequests   BookRequest[]
+  notifications  Notification[]
+
+  @@index([status])
+  @@index([department])
+}
+
+model Teacher {
+  id           Int            @id @default(autoincrement())
+  employeeId   String         @unique
+  fullName     String
+  fatherName   String
+  gender       String
+  dateOfBirth  DateTime
+  department   String
+  designation  String
+  joiningDate  DateTime
+  mobileNumber String
+  email        String         @unique
+  passwordHash String         @default("")
+  status       String         @default("ACTIVE")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  loans        Loan[]
+  reservations  Reservation[]
+  bookRequests  BookRequest[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([department])
+}
+
+model Book {
+  id              Int           @id @default(autoincrement())
+  authorName      String
+  publisher       String
+  edition         String
+  category        String
+  bookName        String
+  subName         String        @default("")
+  shelf           String        @default("")
+  barcode         String        @unique
+  bookInformation String        @default("")
+  imagePath       String
+  createdAt       DateTime      @default(now())
+  loans           Loan[]
+  reservations    Reservation[]
+  bookRequests    BookRequest[]
+
+  @@index([category])
+  @@index([createdAt])
+  @@index([bookName])
+  @@index([authorName])
+}
+
+model Loan {
+  id                 Int       @id @default(autoincrement())
+  barcode            String?   @unique
+  bookId             Int
+  copyNumber         Int       @default(1)
+  studentId          Int?
+  teacherId          Int?
+  status             String    @default("ACTIVE")
+  issueDate          DateTime
+  dueDate            DateTime
+  borrowerAcceptedAt DateTime?
+  adminApprovedAt    DateTime?
+  returnAllowedAt    DateTime?
+  returnedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  book               Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  student            Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher            Teacher?  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, copyNumber])
+  @@index([bookId])
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([status])
+  @@index([returnedAt])
+  @@index([dueDate])
+  @@index([createdAt])
+}
+
+model Reservation {
+  id        Int      @id @default(autoincrement())
+  bookId    Int
+  studentId Int?
+  teacherId Int?
+  status    String
+  createdAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([status])
+}
+
+model BookRequest {
+  id         Int      @id @default(autoincrement())
+  studentId  Int?
+  teacherId  Int?
+  bookId     Int?
+  bookName   String
+  authorName String   @default("")
+  note       String   @default("")
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  student    Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher    Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  book       Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([bookId])
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  studentId Int?
+  teacherId Int?
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  student   Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher   Teacher?  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([readAt])
+}
+
+model Author {
+  id          Int      @id @default(autoincrement())
+  fullName    String
+  biography   String   @default("")
+  email       String   @default("")
+  nationality String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Publisher {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  address   String   @default("")
+  contact   String   @default("")
+  email     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Shelf {
+  id          Int      @id @default(autoincrement())
+  shelfNumber String   @unique
+  location    String   @default("")
+  category    String   @default("")
+  capacity    Int?
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StudentRegistrationRequest {
+  id              Int       @id @default(autoincrement())
+  rollNumber      String
+  fullName        String
+  fatherName      String
+  gender          String
+  dateOfBirth     DateTime
+  department      String
+  program         String
+  semester        Int
+  batchSession    String
+  enrollmentDate  DateTime
+  mobileNumber    String
+  email           String
+  passwordHash    String
+  status          String    @default("PENDING")
+  rejectionReason String?
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model TeacherRegistrationRequest {
+  id              Int       @id @default(autoincrement())
+  employeeId      String
+  fullName        String
+  fatherName      String
+  gender          String
+  dateOfBirth     DateTime
+  department      String
+  designation     String
+  joiningDate     DateTime
+  mobileNumber    String
+  email           String
+  passwordHash    String
+  status          String    @default("PENDING")
+  rejectionReason String?
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model EmailLog {
+  id        Int      @id @default(autoincrement())
+  recipient String
+  subject   String
+  bodyText  String
+  status    String   @default("SENT")
+  error     String?
+  createdAt DateTime @default(now())
+}
